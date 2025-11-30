@@ -26,7 +26,7 @@ jobs:
 
       - name: Create RDP User with Hardcoded Password
         run: |
-          $Password = "123abc"
+          $Password = "Aman@2902"
           $securePass = ConvertTo-SecureString $Password -AsPlainText -Force
 
           if (Get-LocalUser -Name "RDP" -ErrorAction SilentlyContinue) {
@@ -98,7 +98,7 @@ jobs:
           Write-Host "`n=== RDP ACCESS ==="
           Write-Host "Address: $env:TAILSCALE_IP"
           Write-Host "Username: RDP"
-          Write-Host "Password: 123abc"
+          Write-Host "Password: Aman@2902"
           Write-Host "==================`n"
           
           while ($true) {
