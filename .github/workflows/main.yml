@@ -51,7 +51,7 @@ jobs:
           ### Install OBS Studio ###
           Write-Host "Installing OBS Studio..."
           $obs = "$env:TEMP\obs_full_installer.exe"
-          Invoke-WebRequest "https://cdn-fastly.obsproject.com/downloads/OBS-Studio-30.2.3-Full-Installer-x64.exe" -OutFile $obs
+          Invoke-WebRequest "https://cdn-fastly.obsproject.com/downloads/OBS-Studio-32.0.2-Windows-x64-Installer.exe" -OutFile $obs
           Start-Process $obs -ArgumentList "/S" -Wait
           Write-Host "OBS Studio installed successfully."
 
