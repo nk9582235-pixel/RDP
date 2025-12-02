@@ -9,6 +9,7 @@ jobs:
     timeout-minutes: 3600
 
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -41,16 +42,13 @@ jobs:
 
           echo "RDP_PASSWORD=$RdpPassword" >> $env:GITHUB_ENV
 
-      - name: Prepare User Profile Folders (Fix)
+      - name: Prepare User Profile Folders
         run: |
           $userRoot = "C:\Users\RDP"
           $downloads = "$userRoot\Downloads"
 
-          # Create missing profile folders
           New-Item -ItemType Directory -Path $userRoot -Force | Out-Null
           New-Item -ItemType Directory -Path $downloads -Force | Out-Null
-
-          Write-Host "User profile and Downloads folder prepared."
 
       - name: Copy & Extract ZIP to Downloads
         run: |
@@ -61,34 +59,56 @@ jobs:
           $zipPath = "$downloads\ApnaEx.zip"
           $extractPath = "$downloads\ApnaEx"
 
-          # Copy ZIP
           Copy-Item -Path $source -Destination $zipPath -Force
-
-          # Extract ZIP
           Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
 
-          Write-Host "ZIP copied and extracted to Downloads."
+          Write-Host "ZIP copied and extracted."
 
-      - name: Run setup.bat with BOT_TOKEN
+      - name: Install Python 3.12
+        run: |
+          Write-Host "Downloading Python installer..."
+          $pythonInstaller = "$env:TEMP\python.exe"
+          Invoke-WebRequest "https://www.python.org/ftp/python/3.12.1/python-3.12.1-amd64.exe" -OutFile $pythonInstaller
+
+          Write-Host "Installing Python..."
+          Start-Process -FilePath $pythonInstaller -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1" -Wait
+          Write-Host "Python installed."
+
+      - name: Run setup.bat and python run.py
         run: |
           $downloads = "C:\Users\RDP\Downloads"
           $extractPath = "$downloads\ApnaEx"
-          $batFile = "$extractPath\setup.bat"
+          $batFile = "$extractPath\ApnaEx\setup.bat"
+          $pythonScript = "$extractPath\ApnaEx\run.py"
 
           if (-Not (Test-Path $batFile)) {
-            Write-Error "setup.bat not found inside extracted folder!"
+            Write-Error "setup.bat not found!"
             exit 1
           }
 
-          # Run setup.bat with Telegram BOT TOKEN securely
+          # Run setup.bat with token
           Start-Process -FilePath $batFile -ArgumentList "${{ secrets.BOT_TOKEN }}" -Wait
 
-          Write-Host "setup.bat executed successfully."
+          Write-Host "setup.bat finished."
+
+          # Wait 60 seconds
+          Start-Sleep -Seconds 60
+
+          # Run python run.py
+          if (-Not (Test-Path $pythonScript)) {
+            Write-Error "run.py not found!"
+            exit 1
+          }
+
+          Write-Host "Launching python run.py ..."
+          Start-Process -FilePath "python" -ArgumentList "`"$pythonScript`"" -Wait
+          Write-Host "run.py completed."
 
       - name: Install Tailscale
         run: |
           $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
           $installerPath = "$env:TEMP\tailscale.msi"
+
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
           Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
           Remove-Item $installerPath -Force
@@ -99,7 +119,6 @@ jobs:
 
           $tsIP = $null
           $retries = 0
-
           while (-not $tsIP -and $retries -lt 10) {
               $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
               Start-Sleep -Seconds 5
@@ -117,18 +136,18 @@ jobs:
         run: |
           $test = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
           if (-not $test.TcpTestSucceeded) {
-              Write-Error "RDP is not reachable"
+              Write-Error "RDP port is not reachable"
               exit 1
           }
-          Write-Host "RDP reachable."
+          Write-Host "RDP port reachable."
 
       - name: Maintain Connection
         run: |
           Write-Host "`n=== RDP ACCESS ==="
-          Write-Host "Address: $env:TAILSCALE_IP"
+          Write-Host "IP Address: $env:TAILSCALE_IP"
           Write-Host "Username: RDP"
           Write-Host "Password: $env:RDP_PASSWORD"
-          Write-Host "==================`n"
+          Write-Host "===================`n"
 
           while ($true) {
               Write-Host "[$(Get-Date)] RDP Active..."
