@@ -51,13 +51,10 @@ jobs:
         run: |
           Write-Host "Installing Python 3.11 using NuGet..."
 
-          # Install NuGet
           Invoke-WebRequest https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -OutFile nuget.exe
 
-          # Install Python 3.11
           .\nuget.exe install python -Version 3.11.0
 
-          # Find python.exe path
           $pythonDir = (Get-ChildItem -Directory | Where-Object { $_.Name -match "python.3.11" }).FullName
           $pythonExe = "$pythonDir\tools\python.exe"
 
@@ -66,9 +63,6 @@ jobs:
             exit 1
           }
 
-          Write-Host "Python installed at $pythonExe"
-
-          # Add to PATH
           echo "$pythonDir\tools" >> $env:GITHUB_PATH
           echo "PYTHON_EXE=$pythonExe" >> $env:GITHUB_ENV
 
@@ -80,8 +74,11 @@ jobs:
           Invoke-WebRequest https://bootstrap.pypa.io/get-pip.py -OutFile get-pip.py
           & $py get-pip.py
 
+          $pip = "$($py.Replace('python.exe','Scripts\pip.exe'))"
+
           Write-Host "Installing pip dependencies..."
-          & "$($py.Replace('python.exe','Scripts\pip.exe'))" install flask gunicorn pyromod==1.5 aiohttp aiofiles requests hachoir cloudscraper pycryptodome pytz motor "pymongo>=4.0" pyrofork PyJWT aiogram beautifulsoup4 httpx "python-telegram-bot==20.6" tqdm colorama termcolor python-dotenv
+          & $pip install --upgrade pip
+          & $pip install flask gunicorn pyromod==1.5 aiohttp aiofiles requests hachoir cloudscraper pycryptodome pytz motor "pymongo>=4.0" pyrofork PyJWT aiogram beautifulsoup4 httpx "python-telegram-bot==20.6" tqdm colorama termcolor python-dotenv tgcrypto
 
       - name: Run setup.bat
         run: |
@@ -92,11 +89,11 @@ jobs:
           $p = Start-Process -FilePath $bat -PassThru
           $p.WaitForExit()
 
-      - name: Start Bot (LIVE logs)
+      - name: Start Bot (run.py with LIVE logs, no fail)
         run: |
           cd "C:\Users\RDP\Downloads\Apna"
           Write-Host "Starting bot with Python..."
-          & $env:PYTHON_EXE run.py 2>&1 | Tee-Object "C:\Users\RDP\Downloads\Apna\bot.log"
+          & $env:PYTHON_EXE run.py 2>&1 | Tee-Object "C:\Users\RDP\Downloads\Apna\bot.log" || exit 0
         shell: powershell
 
       - name: Install Tailscale
