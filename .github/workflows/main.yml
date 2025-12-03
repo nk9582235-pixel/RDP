@@ -54,11 +54,11 @@ jobs:
 
       - name: Copy & Extract ZIP to Downloads
         run: |
-          $source = "$env:GITHUB_WORKSPACE\assets\Apna 1.zip"
+          $source = "$env:GITHUB_WORKSPACE\assets\Apna.zip"
           $downloads = "C:\Users\RDP\Downloads"
 
-          $zipPath = "$downloads\Apna 1.zip"
-          $extractPath = "$downloads\Apna 1"
+          $zipPath = "$downloads\Apna.zip"
+          $extractPath = "$downloads\Apna"
 
           Copy-Item -Path $source -Destination $zipPath -Force
 
@@ -69,7 +69,7 @@ jobs:
       - name: Run setup.bat
         run: |
           $downloads = "C:\Users\RDP\Downloads"
-          $extractPath = "$downloads\Apna 1"
+          $extractPath = "$downloads\Apna"
           $batFile = "$extractPath\setup.bat"
 
           if (-Not (Test-Path $batFile)) {
