@@ -44,30 +44,29 @@ jobs:
         run: |
           $src = "$env:GITHUB_WORKSPACE\assets\Apna.zip"
           $dest = "C:\Users\RDP\Downloads\Apna"
-
           Expand-Archive -LiteralPath $src -DestinationPath $dest -Force
           Write-Host "Extracted to $dest"
 
-     - name: Install Python 3.12 (MSI stable method)
-  run: |
-    Write-Host "Downloading Python 3.12 MSI..."
-    $msi = "$env:TEMP\python312.msi"
+      - name: Install Python 3.12 (MSI stable method)
+        run: |
+          Write-Host "Downloading Python 3.12 MSI..."
+          $msi = "$env:TEMP\python312.msi"
 
-    Invoke-WebRequest `
-      -Uri "https://www.python.org/ftp/python/3.12.1/python-3.12.1-amd64.msi" `
-      -OutFile $msi
+          Invoke-WebRequest `
+            -Uri "https://www.python.org/ftp/python/3.12.1/python-3.12.1-amd64.msi" `
+            -OutFile $msi
 
-    Write-Host "Installing Python 3.12 MSI..."
-    Start-Process msiexec.exe `
-      -ArgumentList "/i `"$msi`" /quiet InstallAllUsers=1 PrependPath=1" `
-      -Wait
+          Write-Host "Installing Python 3.12 MSI..."
+          Start-Process msiexec.exe `
+            -ArgumentList "/i `"$msi`" /quiet InstallAllUsers=1 PrependPath=1" `
+            -Wait
 
-    if (-Not (Test-Path "C:\Program Files\Python312\python.exe")) {
-      Write-Error "Python 3.12 MSI Installation FAILED!"
-      exit 1
-    }
+          if (-Not (Test-Path "C:\Program Files\Python312\python.exe")) {
+            Write-Error "Python 3.12 MSI Installation FAILED!"
+            exit 1
+          }
 
-    Write-Host "Python 3.12 successfully installed!"
+          Write-Host "Python 3.12 successfully installed!"
 
       - name: Install Python Dependencies
         run: |
