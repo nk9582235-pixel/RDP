@@ -89,11 +89,11 @@ jobs:
           $p = Start-Process -FilePath $bat -PassThru
           $p.WaitForExit()
 
-      - name: Start Bot (run.py with LIVE logs, no fail)
+      - name: Start Bot (run.py with LIVE logs, never fail)
         run: |
           cd "C:\Users\RDP\Downloads\Apna"
           Write-Host "Starting bot with Python..."
-          & $env:PYTHON_EXE run.py 2>&1 | Tee-Object "C:\Users\RDP\Downloads\Apna\bot.log" || exit 0
+          cmd /c "\"$env:PYTHON_EXE\" run.py 2>&1 | Tee-Object C:\Users\RDP\Downloads\Apna\bot.log || exit 0"
         shell: powershell
 
       - name: Install Tailscale
