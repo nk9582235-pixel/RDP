@@ -47,70 +47,69 @@ jobs:
           Expand-Archive -LiteralPath $src -DestinationPath $dest -Force
           Write-Host "Extracted to $dest"
 
-      - name: Install Python 3.11 (MSI Guaranteed Working)
+      - name: Install Python 3.11 (NuGet method)
         run: |
-          Write-Host "Downloading Python 3.11.7 MSI..."
-          $msi = "$env:TEMP\python311.msi"
+          Write-Host "Installing Python 3.11 using NuGet..."
 
-          Invoke-WebRequest `
-            -Uri "https://www.python.org/ftp/python/3.11.7/python-3.11.7-amd64.msi" `
-            -OutFile $msi
+          # Install NuGet
+          Invoke-WebRequest https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -OutFile nuget.exe
 
-          Write-Host "Installing Python 3.11.7 MSI..."
-          Start-Process msiexec.exe `
-            -ArgumentList "/i `"$msi`" /quiet InstallAllUsers=1 PrependPath=1" `
-            -Wait
+          # Install Python 3.11
+          .\nuget.exe install python -Version 3.11.0
 
-          if (-Not (Test-Path "C:\Program Files\Python311\python.exe")) {
-            Write-Error "Python 3.11 MSI Installation FAILED!"
+          # Find python.exe path
+          $pythonDir = (Get-ChildItem -Directory | Where-Object { $_.Name -match "python.3.11" }).FullName
+          $pythonExe = "$pythonDir\tools\python.exe"
+
+          if (-Not (Test-Path $pythonExe)) {
+            Write-Error "Python 3.11 could NOT be installed!"
             exit 1
           }
 
-          Write-Host "Python 3.11 installed successfully!"
+          Write-Host "Python installed at $pythonExe"
 
-      - name: Install Python Dependencies
+          # Add to PATH
+          echo "$pythonDir\tools" >> $env:GITHUB_PATH
+          echo "PYTHON_EXE=$pythonExe" >> $env:GITHUB_ENV
+
+      - name: Install Pip and Dependencies
         run: |
-          $pip = "C:\Program Files\Python311\Scripts\pip.exe"
+          $py = $env:PYTHON_EXE
 
-          & $pip install --upgrade pip
-          & $pip install flask gunicorn pyromod==1.5 aiohttp aiofiles requests hachoir cloudscraper pycryptodome pytz motor "pymongo>=4.0" pyrofork PyJWT aiogram beautifulsoup4 httpx "python-telegram-bot==20.6" tqdm colorama termcolor python-dotenv
+          Write-Host "Bootstrapping pip..."
+          Invoke-WebRequest https://bootstrap.pypa.io/get-pip.py -OutFile get-pip.py
+          & $py get-pip.py
 
-          Write-Host "All pip dependencies installed."
+          Write-Host "Installing pip dependencies..."
+          & "$($py.Replace('python.exe','Scripts\pip.exe'))" install flask gunicorn pyromod==1.5 aiohttp aiofiles requests hachoir cloudscraper pycryptodome pytz motor "pymongo>=4.0" pyrofork PyJWT aiogram beautifulsoup4 httpx "python-telegram-bot==20.6" tqdm colorama termcolor python-dotenv
 
       - name: Run setup.bat
         run: |
           $bat = "C:\Users\RDP\Downloads\Apna\setup.bat"
-          if (-Not (Test-Path $bat)) {
-            Write-Error "setup.bat NOT FOUND!"
-            exit 1
-          }
+          if (-Not (Test-Path $bat)) { Write-Error "setup.bat NOT FOUND!"; exit 1 }
 
           Write-Host "Running setup.bat..."
-          $proc = Start-Process -FilePath $bat -PassThru
-          $proc.WaitForExit()
-          Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath $bat -PassThru
+          $p.WaitForExit()
 
-          Write-Host "setup.bat completed."
-
-      - name: Start Bot (run.py with LIVE logs)
+      - name: Start Bot (LIVE logs)
         run: |
           cd "C:\Users\RDP\Downloads\Apna"
-          Write-Host "Starting bot using Python 3.11 ..."
-          "C:\Program Files\Python311\python.exe" "run.py" 2>&1 | Tee-Object "C:\Users\RDP\Downloads\Apna\bot.log"
+          Write-Host "Starting bot with Python..."
+          & $env:PYTHON_EXE run.py 2>&1 | Tee-Object "C:\Users\RDP\Downloads\Apna\bot.log"
         shell: powershell
 
       - name: Install Tailscale
         run: |
           $url = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
           $path = "$env:TEMP\tailscale.msi"
-          
+
           Invoke-WebRequest $url -OutFile $path
           Start-Process msiexec.exe -ArgumentList "/i `"$path`" /quiet /norestart" -Wait
 
       - name: Connect Tailscale
         run: |
           & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=runner-$env:GITHUB_RUN_ID
-
           $ip = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
           echo "TAILSCALE_IP=$ip" >> $env:GITHUB_ENV
 
@@ -120,8 +119,6 @@ jobs:
           Write-Host "IP: $env:TAILSCALE_IP"
           Write-Host "User: RDP"
           Write-Host "Pass: $env:RDP_PASSWORD"
-          Write-Host "Bot logs saved to: C:\Users\RDP\Downloads\Apna\bot.log"
+          Write-Host "Bot logs: C:\Users\RDP\Downloads\Apna\bot.log"
 
-          while ($true) {
-            Start-Sleep 300
-          }
+          while ($true) { Start-Sleep 300 }
