@@ -36,17 +36,6 @@ jobs:
 
           echo "RDP_PASSWORD=$Password" >> $env:GITHUB_ENV
 
-      - name: Prepare Downloads Folder
-        run: |
-          New-Item -ItemType Directory "C:\Users\RDP\Downloads" -Force | Out-Null
-
-      - name: Extract Apna.zip
-        run: |
-          $src = "$env:GITHUB_WORKSPACE\assets\Apna.zip"
-          $dest = "C:\Users\RDP\Downloads\Apna"
-          Expand-Archive -LiteralPath $src -DestinationPath $dest -Force
-          Write-Host "Extracted to $dest"
-
       - name: Install Python 3.11 (NuGet method)
         run: |
           Write-Host "Installing Python 3.11 using NuGet..."
@@ -65,45 +54,6 @@ jobs:
 
           echo "$pythonDir\tools" >> $env:GITHUB_PATH
           echo "PYTHON_EXE=$pythonExe" >> $env:GITHUB_ENV
-
-      - name: Install Pip and Dependencies
-        run: |
-          $py = $env:PYTHON_EXE
-
-          Write-Host "Bootstrapping pip..."
-          Invoke-WebRequest https://bootstrap.pypa.io/get-pip.py -OutFile get-pip.py
-          & $py get-pip.py
-
-          $pip = "$($py.Replace('python.exe','Scripts\pip.exe'))"
-
-          Write-Host "Installing pip dependencies..."
-          & $pip install --upgrade pip
-          & $pip install flask gunicorn pyromod==1.5 aiohttp aiofiles requests hachoir cloudscraper pycryptodome pytz motor "pymongo>=4.0" pyrofork PyJWT aiogram beautifulsoup4 httpx "python-telegram-bot==20.6" tqdm colorama termcolor python-dotenv tgcrypto
-
-      - name: Run setup.bat
-        run: |
-          $bat = "C:\Users\RDP\Downloads\Apna\setup.bat"
-          if (-Not (Test-Path $bat)) { Write-Error "setup.bat NOT FOUND!"; exit 1 }
-
-          Write-Host "Running setup.bat..."
-          $p = Start-Process -FilePath $bat -PassThru
-          $p.WaitForExit()
-
-      - name: Start Bot (run.py with LIVE logs, never fail)
-        run: |
-          cd "C:\Users\RDP\Downloads\Apna"
-          Write-Host "Starting bot with Python..."
-
-          try {
-            & $env:PYTHON_EXE run.py 2>&1 | Tee-Object "C:\Users\RDP\Downloads\Apna\bot.log"
-          }
-          catch {
-            Write-Host "Bot exited with error but continuing workflow..."
-          }
-
-          exit 0
-        shell: powershell
-
 
       - name: Install Tailscale
         run: |
