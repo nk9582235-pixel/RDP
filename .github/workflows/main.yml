@@ -15,10 +15,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure RDP
+      - name: Enable RDP
         run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          netsh advfirewall firewall add rule name="RDP" dir=in action=allow protocol=TCP localport=3389
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
+            -Name "fDenyTSConnections" -Value 0 -Force
+
+          netsh advfirewall firewall add rule `
+            name="RDP" dir=in action=allow protocol=TCP localport=3389
+
           Restart-Service TermService -Force
 
       - name: Create RDP User
@@ -36,24 +40,62 @@ jobs:
 
           echo "RDP_PASSWORD=$Password" >> $env:GITHUB_ENV
 
-      - name: Install Python 3.11 (NuGet method)
+      - name: Install Python 3.11 (NuGet)
         run: |
-          Write-Host "Installing Python 3.11 using NuGet..."
-
-          Invoke-WebRequest https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -OutFile nuget.exe
+          Invoke-WebRequest https://dist.nuget.org/win-x86-commandline/latest/nuget.exe `
+            -OutFile nuget.exe
 
           .\nuget.exe install python -Version 3.11.0
 
-          $pythonDir = (Get-ChildItem -Directory | Where-Object { $_.Name -match "python.3.11" }).FullName
+          $pythonDir = (Get-ChildItem -Directory | Where-Object {
+            $_.Name -match "python.3.11"
+          }).FullName
+
           $pythonExe = "$pythonDir\tools\python.exe"
 
           if (-Not (Test-Path $pythonExe)) {
-            Write-Error "Python 3.11 could NOT be installed!"
+            Write-Error "Python installation failed"
             exit 1
           }
 
           echo "$pythonDir\tools" >> $env:GITHUB_PATH
           echo "PYTHON_EXE=$pythonExe" >> $env:GITHUB_ENV
+
+      - name: Install Python Dependencies
+        run: |
+          $python = "${{ env.PYTHON_EXE }}"
+
+          & $python -m pip install --upgrade pip
+
+          & $python -m pip install `
+            yt-dlp `
+            google-api-python-client `
+            google-auth-httplib2 `
+            google-auth-oauthlib `
+            requests `
+            tqdm `
+            pycryptodome
+
+      - name: Download Utkarsh.zip
+        run: |
+          $url = "https://raw.githubusercontent.com/nk9582235-pixel/RDP/main/Assets/Utkarsh.zip"
+          $dest = "C:\Users\RDP\Downloads\Utkarsh.zip"
+
+          Invoke-WebRequest $url -OutFile $dest
+
+      - name: Extract Utkarsh.zip
+        run: |
+          Expand-Archive `
+            "C:\Users\RDP\Downloads\Utkarsh.zip" `
+            "C:\Users\RDP\Downloads\Utkarsh" `
+            -Force
+
+      - name: Download Google Drive Installer
+        run: |
+          $url = "https://dl.google.com/drive-file-stream/GoogleDriveSetup.exe"
+          $dest = "C:\Users\RDP\Downloads\GoogleDriveSetup.exe"
+
+          Invoke-WebRequest $url -OutFile $dest
 
       - name: Install Tailscale
         run: |
@@ -61,20 +103,30 @@ jobs:
           $path = "$env:TEMP\tailscale.msi"
 
           Invoke-WebRequest $url -OutFile $path
-          Start-Process msiexec.exe -ArgumentList "/i `"$path`" /quiet /norestart" -Wait
+          Start-Process msiexec.exe `
+            -ArgumentList "/i `"$path`" /quiet /norestart" -Wait
 
       - name: Connect Tailscale
         run: |
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=runner-$env:GITHUB_RUN_ID
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up `
+            --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} `
+            --hostname=runner-$env:GITHUB_RUN_ID
+
           $ip = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
           echo "TAILSCALE_IP=$ip" >> $env:GITHUB_ENV
 
       - name: Keep Alive
         run: |
-          Write-Host "=== RDP ACCESS ==="
-          Write-Host "IP: $env:TAILSCALE_IP"
-          Write-Host "User: RDP"
-          Write-Host "Pass: $env:RDP_PASSWORD"
-          Write-Host "Bot logs: C:\Users\RDP\Downloads\Apna\bot.log"
+          Write-Host "=============================="
+          Write-Host " RDP READY"
+          Write-Host " IP:   $env:TAILSCALE_IP"
+          Write-Host " USER: RDP"
+          Write-Host " PASS: $env:RDP_PASSWORD"
+          Write-Host " FILES:"
+          Write-Host "  - C:\Users\RDP\Downloads\Utkarsh"
+          Write-Host "  - C:\Users\RDP\Downloads\GoogleDriveSetup.exe"
+          Write-Host "=============================="
 
-          while ($true) { Start-Sleep 300 }
+          while ($true) {
+            Start-Sleep 300
+          }
