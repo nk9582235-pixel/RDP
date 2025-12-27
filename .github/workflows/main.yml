@@ -78,8 +78,20 @@ jobs:
 
       - name: Download Utkarsh.zip
         run: |
+          $userDir = "C:\Users\RDP"
+          $downloads = "$userDir\Downloads"
+
+          # Create user profile folders if missing
+          if (!(Test-Path $userDir)) {
+            New-Item -ItemType Directory -Path $userDir -Force | Out-Null
+          }
+
+          if (!(Test-Path $downloads)) {
+            New-Item -ItemType Directory -Path $downloads -Force | Out-Null
+          }
+
           $url = "https://raw.githubusercontent.com/nk9582235-pixel/RDP/main/Assets/Utkarsh.zip"
-          $dest = "C:\Users\RDP\Downloads\Utkarsh.zip"
+          $dest = "$downloads\Utkarsh.zip"
 
           Invoke-WebRequest $url -OutFile $dest
 
@@ -92,8 +104,14 @@ jobs:
 
       - name: Download Google Drive Installer
         run: |
+          $downloads = "C:\Users\RDP\Downloads"
+
+          if (!(Test-Path $downloads)) {
+            New-Item -ItemType Directory -Path $downloads -Force | Out-Null
+          }
+
           $url = "https://dl.google.com/drive-file-stream/GoogleDriveSetup.exe"
-          $dest = "C:\Users\RDP\Downloads\GoogleDriveSetup.exe"
+          $dest = "$downloads\GoogleDriveSetup.exe"
 
           Invoke-WebRequest $url -OutFile $dest
 
